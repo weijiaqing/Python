@@ -1,0 +1,41 @@
+<title>한글 365</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap">
+<style>/*__CSS__*/</style>
+
+<div id="app">
+  <header class="topbar">
+    <div>
+      <h1 id="bar-title">한글 365</h1>
+      <div class="sub" id="bar-sub">第 1 天</div>
+    </div>
+    <div class="spacer"></div>
+    <div class="streak" id="bar-streak">連續 <b>0</b> 天</div>
+    <button class="iconbtn" id="bar-set" aria-label="設定">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.14.35.4.64.73.83H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+  </header>
+
+  <main>
+    <section class="view on" id="v-today"></section>
+    <section class="view" id="v-quiz"></section>
+    <section class="view" id="v-hangul"></section>
+    <section class="view" id="v-cards"></section>
+    <section class="view" id="v-plan"></section>
+    <section class="view" id="v-progress"></section>
+  </main>
+
+  <nav class="tabbar" role="tablist">
+    <button data-tab="today" aria-selected="true" role="tab"><span class="gl">오</span><span class="lb">今日</span></button>
+    <button data-tab="hangul" aria-selected="false" role="tab"><span class="gl">ㄱ</span><span class="lb">字母</span></button>
+    <button data-tab="cards" aria-selected="false" role="tab"><span class="gl">낱</span><span class="lb">單字卡</span></button>
+    <button data-tab="plan" aria-selected="false" role="tab"><span class="gl">표</span><span class="lb">課程表</span></button>
+    <button data-tab="progress" aria-selected="false" role="tab"><span class="gl">도</span><span class="lb">進度</span></button>
+  </nav>
+
+  <div class="sheet" id="sheet"><div class="sheet-in"></div></div>
+</div>
+
+<script>/*__CONTENT__*/</script>
+<script>/*__APP__*/</script>
