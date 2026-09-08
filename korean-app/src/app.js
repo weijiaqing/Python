@@ -66,11 +66,40 @@
     return out;
   }
 
-  function applyRules(sy) {
-    var i, a, b, g;
-    for (i = 0; i < sy.length - 1; i++) {
-      a = sy[i]; b = sy[i + 1];
-      if (a.raw || b.raw) continue;
+  /* Bound nouns that follow the 관형형 ending -(으)ㄹ. After that ㄹ they are
+     always tense (갈 거 [갈 꺼], 할 수 [할 쑤]) — unlike a plain ㄹ-final word,
+     where nothing happens (잘 가, 줄 서다). */
+  var BOUND = { "거": 1, "것": 1, "게": 1, "걸": 1, "데": 1, "수": 1, "줄": 1, "지": 1, "바": 1, "적": 1 };
+  function isBound(s) {
+    return BOUND[String.fromCharCode(0xAC00 + (s.l * 21 + s.v) * 28 + s.t)] === 1;
+  }
+
+  function applyRules(sy, tense) {
+    var i, a, b, g, gap, seq = [];
+    for (i = 0; i < sy.length; i++) if (!sy[i].raw) seq.push(i);
+
+    for (var k = 0; k < seq.length - 1; k++) {
+      a = sy[seq[k]]; b = sy[seq[k + 1]];
+      /* a space between two syllables blocks liaison — 옷 안 is [오단], not
+         [오산] — but not nasalisation or tensing, which cross it freely. */
+      gap = seq[k + 1] !== seq[k] + 1;
+      if (gap) {
+        g = codaGroup(a.t);
+        if (b.l === L_N || b.l === L_M) {
+          if (g === "k") a.t = T_NG;
+          else if (g === "t") a.t = T_N;
+          else if (g === "p") a.t = T_M;
+          continue;
+        }
+        if (tense && (g === "k" || g === "t" || g === "p" || (g === "l" && isBound(b)))) {
+          if (b.l === L_G) b.l = L_KK;
+          else if (b.l === L_D) b.l = L_TT;
+          else if (b.l === L_B) b.l = L_PP;
+          else if (b.l === L_S) b.l = L_SS;
+          else if (b.l === L_J) b.l = L_JJ;
+        }
+        continue;
+      }
 
       /* 1. ㅎ 축약 (aspiration) */
       if (a.t === T_H || a.t === T_NH || a.t === T_LH) {
@@ -93,7 +122,13 @@
         /* 구개음화: ㄷ/ㅌ + 이/히-계열 */
         if ((a.t === T_D) && b.v === 20) { b.l = L_J; a.t = T_NONE; continue; }
         if ((a.t === T_T || a.t === T_LT) && b.v === 20) { b.l = L_CH; a.t = a.t === T_LT ? T_L : T_NONE; continue; }
-        if (SPLIT[a.t]) { b.l = SPLIT[a.t][1]; a.t = SPLIT[a.t][0]; continue; }
+        if (SPLIT[a.t]) {
+          b.l = SPLIT[a.t][1];
+          a.t = SPLIT[a.t][0];
+          /* 제14항: the ㅅ freed from a cluster is tense — 값이 [갑씨] */
+          if (tense && b.l === L_S) b.l = L_SS;
+          continue;
+        }
         if (MOVE[a.t] !== undefined) { b.l = MOVE[a.t]; a.t = T_NONE; continue; }
       }
 
@@ -111,17 +146,93 @@
         if (g === "k") a.t = T_NG;
         else if (g === "t") a.t = T_N;
         else if (g === "p") a.t = T_M;
+        continue;
+      }
+
+      /* 6. 경음화 — an obstruent coda always tenses a following ㄱㄷㅂㅅㅈ.
+         Revised Romanization deliberately leaves this unmarked (학교 is
+         romanized Hakgyo), so it runs only for the phonetic reading. */
+      if (tense) {
+        g = codaGroup(a.t);
+        if (g === "k" || g === "t" || g === "p") {
+          if (b.l === L_G) b.l = L_KK;
+          else if (b.l === L_D) b.l = L_TT;
+          else if (b.l === L_B) b.l = L_PP;
+          else if (b.l === L_S) b.l = L_SS;
+          else if (b.l === L_J) b.l = L_JJ;
+        }
       }
     }
     return sy;
   }
 
-  function romanizeWord(w) {
-    var sy = applyRules(decompose(w)), out = "", i, s, prev = "";
+  /* Words whose real pronunciation depends on morphology the code cannot see:
+     ㄴ-insertion needs a compound boundary (십육 → 심뉵, not 시뷱), and a verb
+     stem in ㄴ/ㅁ tenses its ending (앉다 → 안따) while the same shape in a
+     noun does not (신고 stays 신고). Values are written with those changes
+     applied; the regular rules above then run over them as usual. */
+  var PHON = {
+    /* ㄴ 첨가 — needs a compound boundary the code cannot see */
+    "십육": "십뉵", "육십육": "육십뉵", "서울역": "서울녁", "색연필": "색년필",
+    "담요": "담뇨", "꽃잎": "꽃닙", "한여름": "한녀름", "알약": "알냑",
+    "그럼요": "그럼뇨", "잠깐만요": "잠깐만뇨", "무슨 일": "무슨 닐",
+    /* a verb stem in ㄴ/ㅁ tenses its ending; the same shape in a noun does not */
+    "앉다": "안따", "얹다": "언따", "신다": "신따", "감다": "감따",
+    "젊다": "점따", "닮다": "담따", "껴안다": "껴안따",
+    /* ㄼ/ㄾ stems tense their ending (제25항); 밟- is the standing exception
+       to ㄼ being read [ㄹ] at all */
+    "넓다": "널따", "짧다": "짤따", "얇다": "얄따", "핥다": "할따",
+    "밟다": "밥따", "갈게": "갈께", "될지": "될찌",
+    "문법": "문뻡", "맞춤법": "맏춤뻡", "높임법": "노핌뻡", "발이 넓다": "바리 널따", "입이 짧다": "이비 짤따",
+    /* 맛없다 takes the neutralised coda before a full morpheme (제15항),
+       unlike 맛있다 which is commonly [마시따] */
+    "맛없다": "맏없다", "맛없어요": "맏없어요", "맛없는": "맏없는",
+    /* ㄴ 첨가 at a compound seam */
+    "지하철역": "지하철녁", "집안일": "집안닐", "별일": "별닐",
+    "별일 없어요": "별닐 없어요", "할 일": "할 릴",
+    /* assimilation across a space */
+    "일 년": "일 련", "몇 월": "며 둴", "못 해요": "모 태요",
+    /* 관형형 -(으)ㄹ tenses the bound noun after it: 갈 거 [갈 꺼] */
+    /* 의 as the possessive particle is said [에] */
+    "하늘의 별 따기": "하느레 별 따기"
+  };
+
+  /* The endings -(으)ㄹ게(요) and -(으)ㄹ걸 are tense (할게요 [할께요]); a stem
+     in ㄹ plus -게 is not (알게 되다), so only the shapes that can only be the
+     ending are rewritten here. */
+  function tenseEndings(text) {
+    return text.replace(/([가-힣])(게요|걸요|걸)(?=$|[\s.,!?~])/g, function (m, prev, end) {
+      var p = prev.charCodeAt(0) - 0xAC00;
+      if (p < 0 || p % 28 !== T_L) return m;
+      return prev + (end.charAt(0) === "게" ? "께" : "껄") + end.slice(1);
+    });
+  }
+
+  /* The whole phrase is decomposed at once — spaces stay in the array as raw
+     entries, so applyRules can see across them where the language does. */
+  function phonemes(text, tense) {
+    var src = PHON[text];
+    if (!src) {
+      /* exceptions are looked up per word, but the rules then run over the
+         whole phrase so assimilation can cross a space */
+      src = String(text).split(/(\s+)/).map(function (w) {
+        if (/^\s*$/.test(w)) return w;
+        var bare = w.replace(/[^가-힣]/g, "");
+        if (PHON[bare]) return w.replace(bare, PHON[bare]);
+        return tense ? tenseEndings(w) : w;
+      }).join("");
+    }
+    return applyRules(decompose(src), tense);
+  }
+
+  function romanize(text) {
+    if (!text) return "";
+    var sy = phonemes(text, false), out = "", prev = "", i, s, on;
     for (i = 0; i < sy.length; i++) {
       s = sy[i];
-      if (s.raw) { out += s.raw; prev = ""; continue; }
-      var on = ONS[s.l];
+      /* a space does not break the ll of 일 년; other raw characters do */
+      if (s.raw !== undefined) { out += s.raw; if (!/\s/.test(s.raw)) prev = ""; continue; }
+      on = ONS[s.l];
       /* RR: ㄹ is "r" at onset but "ll" after an l-coda */
       if (s.l === L_R && prev === "l") on = "l";
       out += on + VOW[s.v] + COD[s.t];
@@ -130,22 +241,37 @@
     return out;
   }
 
-  /* ㄴ 첨가 needs morpheme boundaries an algorithm can't see, so the handful of
-     compounds a learner actually meets are listed rather than guessed at. */
-  var NADD = {
-    "십육": "simnyuk", "육십육": "yuksimnyuk", "서울역": "seoullyeok",
-    "색연필": "saengnyeonpil", "담요": "damnyo", "꽃잎": "konnip",
-    "한여름": "hannyeoreum", "무슨일": "museunnil", "일요일": "iryoil"
-  };
+  /* 음절의 끝소리 규칙: whatever is written, only these seven sounds can
+     actually close a syllable — 옷 is said [옫], 닭 is said [닥]. */
+  var NEUTRAL = { k: T_G, n: T_N, t: T_D, l: T_L, m: T_M, p: T_B, ng: T_NG };
+  var V_UI = 19, V_I = 20;
+  /* ㅑ→ㅏ ㅒ→ㅐ ㅕ→ㅓ ㅖ→ㅔ ㅛ→ㅗ ㅠ→ㅜ */
+  var DEGLIDE = { 2: 0, 3: 1, 6: 4, 7: 5, 12: 8, 17: 13 };
 
-  function romanize(text) {
+  function pronounce(text) {
     if (!text) return "";
-    return String(text).split(/(\s+)/).map(function (p) {
-      if (/^\s+$/.test(p)) return p;
-      var bare = p.replace(/[^가-힣]/g, "");
-      if (NADD[bare]) return p.replace(bare, NADD[bare]);
-      return romanizeWord(p);
-    }).join("");
+    var sy = phonemes(text, true), out = "", i, s, tt, v;
+    for (i = 0; i < sy.length; i++) {
+      s = sy[i];
+      if (s.raw !== undefined) { out += s.raw; continue; }
+      tt = s.t && NEUTRAL[codaGroup(s.t)] !== undefined ? NEUTRAL[codaGroup(s.t)] : s.t;
+      /* 제5항 다만3: ㅢ after a real consonant is said [ㅣ] — 저희 [저히].
+         RR still writes it "ui", so this is phonetic only. */
+      v = (s.v === V_UI && s.l !== L_NG) ? V_I : s.v;
+      /* Korean has no glide after an affricate: 죠 is said [조], 쳐 is [처]
+         (제5항 다만1). Written that way, spoken without the y. */
+      if (s.l === L_J || s.l === L_JJ || s.l === L_CH) v = DEGLIDE[v] !== undefined ? DEGLIDE[v] : v;
+      out += String.fromCharCode(0xAC00 + (s.l * 21 + v) * 28 + tt);
+    }
+    return out;
+  }
+
+  function readingOf(text) {
+    /* grammar patterns like -(으)ㄹ 것 같다 aren't words; bracketing a
+       reading for them is noise, not help */
+    if (!text || /[-()/]/.test(text)) return "";
+    var p = pronounce(text);
+    return p !== text ? p : "";
   }
 
   /* ---------- storage ---------- */
@@ -422,7 +548,9 @@
       var vl = el("div", "vlist");
       vocab.forEach(function (x) {
         var r = el("button", "vrow");
-        r.innerHTML = '<span class="kv"><span class="ko">' + esc(x.ko) + '</span>' +
+        var rd = readingOf(x.ko);
+        r.innerHTML = '<span class="kv"><span class="ko">' + esc(x.ko) +
+          (rd ? ' <b class="rd">[' + esc(rd) + "]</b>" : "") + "</span>" +
           '<span class="ro">' + esc(romanize(x.ko)) + "</span>" +
           '<div class="zh">' + esc(x.zh) + "</div>" +
           (x.note ? '<div class="note">' + esc(x.note) + "</div>" : "") + "</span>" +
@@ -809,14 +937,19 @@
     }
 
     var tool = el("div", "card");
-    tool.innerHTML = '<div style="font-size:13px;font-weight:600;margin-bottom:8px">拼音小工具</div>' +
+    tool.innerHTML = '<div style="font-size:13px;font-weight:600;margin-bottom:8px">發音對照工具</div>' +
       '<input id="ro-in" placeholder="輸入韓文，例如：좋아요" style="width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font-family:var(--font-ko);font-size:17px;font-weight:700" />' +
-      '<div id="ro-out" style="font-family:var(--font-mono);font-size:14px;color:var(--jade);margin-top:9px;min-height:20px"></div>' +
-      '<div class="tip">自動套用連音、鼻音化、口蓋音化等實際發音規則。</div>';
-    v.appendChild(section("羅馬拼音轉換", tool));
-    var inp = tool.querySelector("#ro-in"), out = tool.querySelector("#ro-out");
+      '<div id="rd-out" style="font-family:var(--font-ko);font-size:19px;font-weight:700;color:var(--vermilion);margin-top:10px;min-height:24px"></div>' +
+      '<div id="ro-out" style="font-family:var(--font-mono);font-size:14px;color:var(--ink-3);min-height:20px"></div>' +
+      '<div class="tip"><b>紅字是實際發音</b>，套用連音、鼻音化、流音化、激音化、硬音化、口蓋音化等規則。' +
+      '灰字是<b>羅馬拼音</b>（國際標準寫法）——依規定<b>不標硬音化</b>，所以 학교 拼作 hakgyo 卻唸 [학꾜]。' +
+      '路牌和護照上看到的是灰字那一種。</div>';
+    v.appendChild(section("發音與拼音", tool));
+    var inp = tool.querySelector("#ro-in"), out = tool.querySelector("#ro-out"), rd = tool.querySelector("#rd-out");
     inp.addEventListener("input", function () {
-      out.textContent = romanize(inp.value);
+      var s = inp.value;
+      rd.textContent = s ? "[" + pronounce(s) + "]" : "";
+      out.textContent = romanize(s);
     });
     inp.addEventListener("keydown", function (e) { if (e.key === "Enter") speak(inp.value); });
   }
@@ -897,7 +1030,9 @@
       card.onclick = function () { fc.flipped = true; speak(c.ko); drawCard(); };
       v.appendChild(card);
     } else {
-      card.innerHTML = '<div class="big">' + esc(c.ko) + '</div>' +
+      var crd = readingOf(c.ko);
+      card.innerHTML = '<div class="big">' + esc(c.ko) + "</div>" +
+        (crd ? '<div class="rd">[' + esc(crd) + "]</div>" : "") +
         '<div class="ro">' + esc(romanize(c.ko)) + "</div>" +
         '<div class="mid">' + esc(c.zh) + "</div>";
       card.onclick = function () { speak(c.ko); };
@@ -1182,7 +1317,7 @@
     setView("today");
   }
 
-  window.KO = { romanize: romanize, speak: speak };
+  window.KO = { romanize: romanize, pronounce: pronounce, readingOf: readingOf, speak: speak };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
   else boot();
 })();

@@ -519,6 +519,10 @@ button { font: inherit; color: inherit; }
 
 .hide-ro .ro { display: none; }
 
+/* the bracketed reading — shown only where saying it as written would be wrong */
+.rd { font-family: var(--font-ko); font-size: .72em; font-weight: 400; color: var(--vermilion); white-space: nowrap; }
+.fcard .rd { font-family: var(--font-ko); font-size: 17px; color: var(--vermilion); font-weight: 700; }
+
 /* ---------- letter grid (hangul module) ---------- */
 
 .lgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 8px; }
