@@ -464,6 +464,7 @@ button { font: inherit; color: inherit; }
 .vrow:active { background: var(--surface-2); }
 .vrow .kv { min-width: 0; flex: 1; }
 .vrow .ko {
+  display: block;
   font-family: var(--font-ko);
   font-size: 20px;
   font-weight: 700;
@@ -471,10 +472,12 @@ button { font: inherit; color: inherit; }
   word-break: keep-all;
 }
 .vrow .ro {
+  display: block;
   font-family: var(--font-mono);
   font-size: 11.5px;
   color: var(--ink-3);
   letter-spacing: .04em;
+  line-height: 1.4;
 }
 .vrow .zh { font-size: 14px; color: var(--ink-2); margin-top: 1px; }
 .vrow .note {
@@ -518,9 +521,9 @@ button { font: inherit; color: inherit; }
 
 /* ---------- letter grid (hangul module) ---------- */
 
-.lgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 8px; }
+.lgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 8px; }
 .lcell {
-  aspect-ratio: 1;
+  min-height: 92px;
   border: 1px solid var(--line);
   border-radius: var(--r-md);
   background: var(--surface);
@@ -528,14 +531,26 @@ button { font: inherit; color: inherit; }
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: 3px;
   cursor: pointer;
-  padding: 4px;
+  padding: 8px 5px;
 }
 .lcell:active { background: var(--jade-soft); }
 .lcell .g { font-family: var(--font-ko); font-size: 26px; font-weight: 700; line-height: 1; }
 .lcell .r { font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-3); }
-.lcell .n { font-size: 10px; color: var(--ink-3); text-align: center; line-height: 1.3; }
+/* sample syllable you actually hear, then the letter's own name */
+.lcell .nm {
+  font-family: var(--font-ko);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--jade);
+  line-height: 1.2;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+.lcell .nm i { font-style: normal; font-size: 10.5px; font-weight: 400; color: var(--ink-3); }
+.lcell .n { font-size: 10px; color: var(--ink-3); text-align: center; line-height: 1.35; }
 
 /* ---------- buttons ---------- */
 

@@ -276,6 +276,35 @@
     } catch (e) {}
   }
 
+  /* ---------- letters ---------- */
+
+  /* A bare consonant can't be pronounced on its own, so Korean gives each one
+     a name — ㄱ is 기역. Speaking that name is what a Korean would say, but a
+     learner tapping ㄱ on day two wants the *sound*, and hears two unexplained
+     syllables instead. So tapping plays the letter in a syllable (ㄱ → 가) and
+     the name stays visible in the cell, where it belongs. */
+  var LETTER_NAMES = {
+    "기역": "가", "니은": "나", "디귿": "다", "리을": "라", "미음": "마",
+    "비읍": "바", "시옷": "사", "이응": "아", "지읒": "자", "치읓": "차",
+    "키읔": "카", "티읕": "타", "피읖": "파", "히읗": "하",
+    "쌍기역": "까", "쌍디귿": "따", "쌍비읍": "빠", "쌍시옷": "싸", "쌍지읒": "짜"
+  };
+
+  function letterSay(L) { return LETTER_NAMES[L[2]] || L[2] || L[0]; }
+  function letterName(L) { return LETTER_NAMES[L[2]] ? L[2] : ""; }
+
+  function letterCell(L) {
+    var c = el("button", "lcell");
+    var say = letterSay(L), name = letterName(L);
+    c.innerHTML = '<span class="g">' + esc(L[0]) + "</span>" +
+      '<span class="r">' + esc(L[1]) + "</span>" +
+      (name ? '<span class="nm">' + esc(say) + '<i>' + esc(name) + "</i></span>" : "") +
+      (L[3] ? '<span class="n">' + esc(L[3]) + "</span>" : "");
+    c.setAttribute("aria-label", L[0] + " " + say + (name ? " " + name : ""));
+    c.onclick = function () { speak(say); };
+    return c;
+  }
+
   /* ---------- dom helpers ---------- */
 
   function el(tag, cls, html) {
@@ -381,14 +410,11 @@
 
     if (data.letters && data.letters.length) {
       var lg = el("div", "lgrid");
-      data.letters.forEach(function (L) {
-        var c = el("button", "lcell");
-        c.innerHTML = '<span class="g">' + esc(L[0]) + '</span><span class="r">' + esc(L[1]) + "</span>" +
-          (L[3] ? '<span class="n">' + esc(L[3]) + "</span>" : "");
-        c.onclick = function () { speak(L[2] || L[0]); };
-        lg.appendChild(c);
-      });
-      v.appendChild(section("字母", lg));
+      data.letters.forEach(function (L) { lg.appendChild(letterCell(L)); });
+      var lw = el("div");
+      lw.appendChild(lg);
+      lw.appendChild(el("div", "tip", "點格子聽發音。子音會唸成<b>帶 ㅏ 的音節</b>（ㄱ→가），因為子音單獨無法發音；綠色小字是<b>那個字母的名字</b>，韓國人拼字時會用到。"));
+      v.appendChild(section("字母", lw));
     }
 
     var vocab = data.review ? weekVocab(w) : dayVocab(d);
@@ -476,8 +502,8 @@
         qs.push({
           type: "letter", label: "這個字母怎麼唸？", prompt: L[0], ko: true,
           options: shuffle([L].concat(others)).map(function (x) { return { text: x[1], ok: x[1] === L[1], mono: true }; }),
-          answer: L[1], say: L[2] || L[0],
-          note: L[3] || ""
+          answer: L[1], say: letterSay(L),
+          note: (letterName(L) ? "字母名稱：" + letterName(L) + "　" : "") + (L[3] || "")
         });
       });
     }
@@ -757,13 +783,7 @@
 
     (HANGUL.groups || []).forEach(function (g) {
       var grid = el("div", "lgrid");
-      g.items.forEach(function (L) {
-        var c = el("button", "lcell");
-        c.innerHTML = '<span class="g">' + esc(L[0]) + '</span><span class="r">' + esc(L[1]) + "</span>" +
-          (L[3] ? '<span class="n">' + esc(L[3]) + "</span>" : "");
-        c.onclick = function () { speak(L[2] || L[0]); };
-        grid.appendChild(c);
-      });
+      g.items.forEach(function (L) { grid.appendChild(letterCell(L)); });
       var wrap = el("div");
       if (g.note) {
         var nt = el("div", "tip", g.note);
